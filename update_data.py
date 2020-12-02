@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
+import copy
 from io import StringIO
+from tqdm import tqdm
 from collections import Counter, OrderedDict
 
 wddict={True: 'W', False: 'L'}
@@ -48,6 +50,46 @@ def seed(wins, pts):
         else:
             out.append(0)
     return out
+
+def playoffs(wins, pts, seedsRow):
+    
+    seedsRow = list(seedsRow)
+    bonus1 = pts[seedsRow.index(1)]*0.01
+    bonus2 = pts[seedsRow.index(2)]*0.005
+    inds = [seedsRow.index(i) for i in [4,5,6]]
+    seed1opp = inds[np.argmin(pts[inds])]
+    inds2Seed = list(inds)
+    inds2Seed.remove(seed1opp)
+    seed2opp = inds2Seed[np.argmin(pts[inds2Seed])]
+    inds2Seed.remove(seed2opp)
+    matchups = [[teams[seedsRow.index(1)], teams[seed1opp]],
+                [teams[seedsRow.index(2)], teams[seed2opp]],
+                [teams[seedsRow.index(3)], teams[inds2Seed[0]]]]
+    dfP = pd.DataFrame(
+        np.c_[pts/13, seedsRow], index=teams, columns=['avgPts', 'seed']
+    )
+    dfP = dfP[dfP['seed'] > 0]
+    dfP['regressed'] = dfP.avgPts.mean() * 0.7 + dfP.avgPts*0.3
+    playoffPts = np.random.randn(6, 3)*25 + dfP.regressed.values.reshape(6,1)
+    dfP['P1'] = playoffPts[:,0]
+    dfP['P2'] = playoffPts[:,1]
+    dfP['P3'] = playoffPts[:,2]
+    dfP['P1B'] = 0
+    dfP.loc[teams[seedsRow.index(1)], 'P1B'] = bonus1
+    dfP.loc[teams[seedsRow.index(2)], 'P1B'] = bonus2
+    reversed_matchups = [[x[1], x[0]] for x in matchups]
+    all_matchups = copy.copy(matchups)
+    all_matchups.extend(reversed_matchups)
+    all_matchups = np.array(all_matchups)
+    dfP.loc[all_matchups[:,0], "P1Opp"]=all_matchups[:, 1]
+    dfP["P1Win"] = (dfP["P1"].values + dfP['P1B'].values) > dfP.loc[dfP['P1Opp'].values].P1.values
+    dfPW2 = dfP[dfP["P1Win"]]
+    dfP["W2"]=dfPW2.P2 + dfPW2.P3
+    dfP.sort_values('W2', ascending=False, inplace=True)
+    dfP.loc[dfP.index.values, "Result"] = [1,2,3,4,4,4]
+    yyy = dfP.loc[teams, 'Result']
+    yyy = yyy.fillna(7)
+    return yyy
 
 
 x = """Team	Wins	Pts	W12 Opponent	W13 Opponent	Pts/week	Regressed
@@ -104,8 +146,13 @@ wins13 = pts_w13 > pts_w13[:, indices(w13Opp)]
 total_pts = pts_w12+pts_w13+pts
 total_wins = wins + wins12.astype(int) + wins13.astype(int)
 
-seeds = np.array([seed(total_wins[i], total_pts[i]) for i in range(N)])
+seeds = np.array([seed(total_wins[i], total_pts[i]) for i in tqdm(range(N))])
+
+playoffResults = np.array(
+    [playoffs(w,p,s)for w, p, s in tqdm(zip(total_wins, total_pts, seeds), total=N)]
+)
 
 np.save('w12.npy', pts_w12)
 np.save('w13.npy', pts_w13)
 np.save('seeds.npy', seeds)
+np.save('playoffResults.npy', playoffResults)
