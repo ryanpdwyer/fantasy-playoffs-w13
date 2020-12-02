@@ -1,5 +1,3 @@
-time python update_data.py
-
 mkdir -p ~/.streamlit/
 
 echo "\
