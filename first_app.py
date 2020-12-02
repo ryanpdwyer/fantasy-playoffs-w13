@@ -60,11 +60,11 @@ def makeSeeds(seeds):
     dfSeedsOrdered = dfSeedsPercent[[1,2,3,4,5,6,0]]
     dfS = dfSeedsOrdered.rename(columns={0:"Miss Playoffs"})
     dfS['avgSeed'] = np.round(dfS[[1,2,3,4,5,6,'Miss Playoffs']].values @ np.r_[np.arange(1,7), [8.5]] / 100, 1)
-    dfS['Playoff %'] = 100 - dfS['Miss Playoffs']
+    dfS['Any'] = 100 - dfS['Miss Playoffs']
     dfSS=dfS.sort_values('avgSeed', ascending=True)
     del dfSS['avgSeed']
     del dfSS['Miss Playoffs']
-    return dfSS
+    return dfSS.loc[:, ['Any', 1, 2, 3, 4, 5, 6]]
 
 def playoffs(wins, pts, seedsRow):
     
@@ -141,20 +141,6 @@ orderw13 = np.array(w13matchups).flatten()
 df['R2']=(df['Pts'].values.mean() * 0.7 + df['Pts']*0.3)/11
 ptsAvg = df["R2"].values
 
-w12Current = """
-Team	Pts	Proj
-Ryan	101.18	116.80
-David	148.5	148.5
-Mitch	91.6	91.6
-Bryan	105.3	105.3
-AJ	137.82	137.82
-Parm	154.24	154.24
-Torry	107	107
-James	91.3	116.04
-Daniel	97.18	97.18
-Mike	135.34	145.8
-"""
-
 df12 = pd.read_excel('live-pts.xlsx', 'W12')
 
 df12['left'] = (df12['Proj'] - df12['Pts'])*0.953 # Scale factor
@@ -165,7 +151,7 @@ df13['TempProj'] = (df13['Proj']*0.6 + df.Pts.mean()*0.4*1.045) # Fix by Thursda
 df13['left'] = (df13['TempProj'] - df13['Pts'])*0.953 # Scale factor
 
 
-st.title('Playoff Chances')
+st.title('Playoffs!')
 
 pts_w12 = np.load('w12.npy')
 pts_w13 = np.load('w13.npy')
@@ -180,8 +166,11 @@ total_pts = pts_w12+pts_w13+df["Pts"].values
 total_wins = df['Wins'].values + wins12.astype(int) + wins13.astype(int)
 
 
+st.write("Projected outcomes for each game:")
 
 slot1 = st.empty()
+
+st.write("Use the buttons to see how playoff chances change depending on the results of each game.")
 
 st.write("Week 12")
 TJwinner = st.radio(label='Winner', options=['Any', 'Torry', 'James'])
@@ -231,6 +220,7 @@ dfWinProb13 = pd.DataFrame(
     columns=['Win Prob', 'Proj']).loc[teams[orderw13], :]
 
 
+
 slot1cols = slot1.beta_columns(2)
 slot1cols[0].write("Week 12")
 slot1cols[0].dataframe(
@@ -245,8 +235,10 @@ slot1cols[1].dataframe(
         )
 
 
-
+st.write("Playoff Seeding Chances")
 st.dataframe(dfSS.style.format("{:.1f}")\
     .background_gradient(cmap='Greens', low=0.0, high=0.7))
+
+st.write("Standings")
 st.dataframe(dfAvg.style.format("{:.1f}")\
     .background_gradient(cmap='RdBu_r', low=1, high=1, axis=0))
