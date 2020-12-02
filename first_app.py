@@ -106,6 +106,21 @@ def playoffs(wins, pts, seedsRow):
     yyy = yyy.fillna(7)
     return yyy
 
+def analyzePlayoffResults(playoffResults):
+    winsCount = {team: Counter(play) for team, play in zip(teams,
+                                                    playoffResults.T)}
+    dfPR = pd.DataFrame.from_dict(winsCount, orient='index').fillna(0)/N*100
+    dfPR.sort_values(1, ascending=False, inplace=True)
+    dfPR['cash'] = (dfPR[1]*350 + dfPR[2]*100 + dfPR[3]*50)/100
+    dfPRO = dfPR.loc[:, [1, 2, 3, 4, 7, 'cash']].rename(columns={1.0: "Champion", 2.0: "2nd", 3.0: "3rd", 4.0: 'Playoffs Loss', 7.0: "Miss Playoffs"})
+    dfPRO['Make Final'] = dfPRO["Champion"] + dfPRO["2nd"] + dfPRO["3rd"]
+    dfPRO.round(1)
+    try:
+        del dfPRO['avgSeed']
+    except:
+        pass
+    return dfPRO
+
 def get_matchups(opponents):
     return list(set(
         tuple(sorted(x)) for x in list(zip(np.arange(10), indices(w13Opp)))
@@ -156,6 +171,7 @@ st.title('Playoffs!')
 pts_w12 = np.load('w12.npy')
 pts_w13 = np.load('w13.npy')
 seeds = np.load('seeds.npy')
+playoffResults = np.load('playoffResults.npy')
 
 N = len(pts_w12)
 
@@ -219,7 +235,7 @@ dfWinProb13 = pd.DataFrame(
     np.c_[wins13[inds].mean(axis=0)*100, pts_w13[inds].mean(axis=0)], index=teams,
     columns=['Win Prob', 'Proj']).loc[teams[orderw13], :]
 
-
+dfPRO = analyzePlayoffResults(playoffResults[inds])
 
 slot1cols = slot1.beta_columns(2)
 slot1cols[0].write("Week 12")
@@ -242,3 +258,7 @@ st.dataframe(dfSS.style.format("{:.1f}")\
 st.write("Standings")
 st.dataframe(dfAvg.style.format("{:.1f}")\
     .background_gradient(cmap='RdBu_r', low=1, high=1, axis=0))
+
+st.write("Playoff Outcomes")
+st.dataframe(dfPRO.loc[:, ['Champion', "2nd", "3rd", "Make Final", "cash"]].style.format("{:.1f}")\
+    .background_gradient(cmap='Greens', low=0, high=0.7))
