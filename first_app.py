@@ -256,6 +256,7 @@ st.dataframe(dfSS.style.format("{:.1f}")\
     .background_gradient(cmap='Greens', low=0.0, high=0.7))
 
 st.write("Standings")
+dfAvg.sort_values('avgWins', inplace=True)
 st.dataframe(dfAvg.style.format("{:.1f}")\
     .background_gradient(cmap='RdBu_r', low=1, high=1, axis=0))
 
