@@ -109,7 +109,7 @@ def playoffs(wins, pts, seedsRow):
 def analyzePlayoffResults(playoffResults):
     winsCount = {team: Counter(play) for team, play in zip(teams,
                                                     playoffResults.T)}
-    dfPR = pd.DataFrame.from_dict(winsCount, orient='index').fillna(0)/N*100
+    dfPR = pd.DataFrame.from_dict(winsCount, orient='index').fillna(0)/len(playoffResults)*100
     dfPR.sort_values(1, ascending=False, inplace=True)
     dfPR['cash'] = (dfPR[1]*350 + dfPR[2]*100 + dfPR[3]*50)/100
     dfPRO = dfPR.loc[:, [1, 2, 3, 4, 7, 'cash']].rename(columns={1.0: "Champion", 2.0: "2nd", 3.0: "3rd", 4.0: 'Playoffs Loss', 7.0: "Miss Playoffs"})
