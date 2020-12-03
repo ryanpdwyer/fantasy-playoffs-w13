@@ -188,9 +188,6 @@ slot1 = st.empty()
 
 st.write("Use the buttons to see how playoff chances change depending on the results of each game.")
 
-st.write("Week 12")
-TJwinner = st.radio(label='Winner', options=['Any', 'Torry', 'James'])
-
 st.write("Week 13")
 n_cols = 5
 cols = st.beta_columns(n_cols)
@@ -201,10 +198,6 @@ for i, x in enumerate(w13matchups):
     )
 
 inds = np.arange(N, dtype=int)
-
-if TJwinner !='Any':
-    inds_match = np.nonzero(wins12[:, list(teams).index(TJwinner)])
-    inds = np.intersect1d(inds, inds_match, assume_unique=True)
 
 for button in buttons:
     if button != 'Any':
@@ -256,7 +249,7 @@ st.dataframe(dfSS.style.format("{:.1f}")\
     .background_gradient(cmap='Greens', low=0.0, high=0.7))
 
 st.write("Standings")
-dfAvg.sort_values('avgWins', inplace=True)
+dfAvg.sort_values('avgWins', inplace=True, ascending=False)
 st.dataframe(dfAvg.style.format("{:.1f}")\
     .background_gradient(cmap='RdBu_r', low=1, high=1, axis=0))
 
