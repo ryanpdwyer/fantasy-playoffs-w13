@@ -8,6 +8,7 @@ import copy
 from collections import Counter, OrderedDict
 
 wddict={True: 'W', False: 'L'}
+
 def wd(x):
     return list(map(lambda y: wddict[y], x))
 
@@ -29,30 +30,6 @@ def match_inds(src, dest):
     src_list = list(src)
     return [src_list.index(x) for x in dest]
 
-def gamma(mean, shape):
-    return np.random.default_rng().gamma(mean/5, 5, shape)
-
-def playoff_seeds(wins, pts):
-    df1 = pd.DataFrame(data=np.c_[wins,pts], index=teams, columns=["Wins", "Pts"])
-    df1_sorted = df1.sort_values(["Wins", "Pts"], ascending=False)
-    record_qualifiers = df1_sorted[:4].index.values
-    pts_qualifiers = teams[np.argsort(pts)[::-1]]
-    teams_sorted = unique_unsorted(np.r_[record_qualifiers, pts_qualifiers])[:6]
-    return teams_sorted
-
-def unique_unsorted(x):
-    return x[sorted(np.unique(x, return_index=True)[1])]
-
-def seed(wins, pts):
-    playoff_teams = playoff_seeds(wins, pts)
-    out = []
-    for team in teams:
-        if team in playoff_teams:
-            out.append(list(playoff_teams).index(team)+1)
-        else:
-            out.append(0)
-    return out
-
 def makeSeeds(seeds):
     seedCounts = {team: Counter(s) for team, s in zip(teams, seeds.T)}
     dfSeeds = pd.DataFrame.from_dict(seedCounts, orient='index')
@@ -65,46 +42,6 @@ def makeSeeds(seeds):
     del dfSS['avgSeed']
     del dfSS['Miss Playoffs']
     return dfSS.loc[:, ['Any', 1, 2, 3, 4, 5, 6]]
-
-def playoffs(wins, pts, seedsRow):
-    
-    seedsRow = list(seedsRow)
-    bonus1 = pts[seedsRow.index(1)]*0.01
-    bonus2 = pts[seedsRow.index(2)]*0.005
-    inds = [seedsRow.index(i) for i in [4,5,6]]
-    seed1opp = inds[np.argmin(pts[inds])]
-    inds2Seed = list(inds)
-    inds2Seed.remove(seed1opp)
-    seed2opp = inds2Seed[np.argmin(pts[inds2Seed])]
-    inds2Seed.remove(seed2opp)
-    matchups = [[teams[seedsRow.index(1)], teams[seed1opp]],
-                [teams[seedsRow.index(2)], teams[seed2opp]],
-                [teams[seedsRow.index(3)], teams[inds2Seed[0]]]]
-    dfP = pd.DataFrame(
-        np.c_[pts/13, seedsRow], index=teams, columns=['avgPts', 'seed']
-    )
-    dfP = dfP[dfP['seed'] > 0]
-    dfP['regressed'] = dfP.avgPts.mean() * 0.7 + dfP.avgPts*0.3
-    playoffPts = np.random.randn(6, 3)*25 + dfP.regressed.values.reshape(6,1)
-    dfP['P1'] = playoffPts[:,0]
-    dfP['P2'] = playoffPts[:,1]
-    dfP['P3'] = playoffPts[:,2]
-    dfP['P1B'] = 0
-    dfP.loc[teams[seedsRow.index(1)], 'P1B'] = bonus1
-    dfP.loc[teams[seedsRow.index(2)], 'P1B'] = bonus2
-    reversed_matchups = [[x[1], x[0]] for x in matchups]
-    all_matchups = copy.copy(matchups)
-    all_matchups.extend(reversed_matchups)
-    all_matchups = np.array(all_matchups)
-    dfP.loc[all_matchups[:,0], "P1Opp"]=all_matchups[:, 1]
-    dfP["P1Win"] = (dfP["P1"].values + dfP['P1B'].values) > dfP.loc[dfP['P1Opp'].values].P1.values
-    dfPW2 = dfP[dfP["P1Win"]]
-    dfP["W2"]=dfPW2.P2 + dfPW2.P3
-    dfP.sort_values('W2', ascending=False, inplace=True)
-    dfP.loc[dfP.index.values, "Result"] = [1,2,3,4,4,4]
-    yyy = dfP.loc[teams, 'Result']
-    yyy = yyy.fillna(7)
-    return yyy
 
 def analyzePlayoffResults(playoffResults):
     winsCount = {team: Counter(play) for team, play in zip(teams,
@@ -161,9 +98,8 @@ df12 = pd.read_excel('live-pts.xlsx', 'W12')
 df12['left'] = (df12['Proj'] - df12['Pts'])*0.953 # Scale factor
 df12Inds = match_inds(df12.Team.values, teams)
 
-df13 = pd.read_excel('live-pts.xlsx', 'W13')
-df13['TempProj'] = (df13['Proj']*0.6 + df.Pts.mean()*0.4*1.045) # Fix by Thursday
-df13['left'] = (df13['TempProj'] - df13['Pts'])*0.953 # Scale factor
+# Completely localized!
+current_pts13 = np.load('scores_projs13.npy')[:, 0]
 
 
 st.title('Playoffs!')
@@ -225,20 +161,20 @@ dfWinProb = pd.DataFrame(
     columns=['Win Prob', 'Pts', 'Proj']).loc[teams[orderw12], :]
 
 dfWinProb13 = pd.DataFrame(
-    np.c_[wins13[inds].mean(axis=0)*100, pts_w13[inds].mean(axis=0)], index=teams,
-    columns=['Win Prob', 'Proj']).loc[teams[orderw13], :]
+    np.c_[wins13[inds].mean(axis=0)*100, current_pts13, pts_w13[inds].mean(axis=0)], index=teams,
+    columns=['Win Prob', 'Pts', 'Proj']).loc[teams[orderw13], :]
 
 dfPRO = analyzePlayoffResults(playoffResults[inds])
 
-slot1cols = slot1.beta_columns(2)
-slot1cols[0].write("Week 12")
-slot1cols[0].dataframe(
-    dfWinProb.style.format("{:.1f}")\
-        .background_gradient(cmap='RdBu_r', low=1.25, high=1.25, axis=0, subset=['Win Prob'])
-        )
+# slot1cols = slot1.beta_columns(2)
+# slot1cols[0].write("Week 12")
+# slot1cols[0].dataframe(
+#     dfWinProb.style.format("{:.1f}")\
+#         .background_gradient(cmap='RdBu_r', low=1.25, high=1.25, axis=0, subset=['Win Prob'])
+#         )
 
-slot1cols[1].write("Week 13")
-slot1cols[1].dataframe(
+slot1.write("Week 13")
+slot1.dataframe(
     dfWinProb13.style.format("{:.1f}")\
         .background_gradient(cmap='RdBu_r', low=1.25, high=1.25, axis=0, subset=['Win Prob'])
         )

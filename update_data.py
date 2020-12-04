@@ -51,44 +51,55 @@ def seed(wins, pts):
             out.append(0)
     return out
 
-def playoffs(wins, pts, seedsRow):
-    
-    seedsRow = list(seedsRow)
-    bonus1 = pts[seedsRow.index(1)]*0.01
-    bonus2 = pts[seedsRow.index(2)]*0.005
-    inds = [seedsRow.index(i) for i in [4,5,6]]
-    seed1opp = inds[np.argmin(pts[inds])]
+def playoffs_fast(wins, pts, seedsRow):
+    seedsArray = seedsRow
+    playoff_inds = np.where(seedsArray > 0)[0]
+
+    pwins = wins[playoff_inds]
+    ppts = pts[playoff_inds]
+    pseedsRow = list(seedsArray[playoff_inds])
+
+    inds = [pseedsRow.index(i) for i in [4,5,6]]
+    # Choose opponents
+    seed1opp = inds[np.argmin(ppts[inds])]
     inds2Seed = list(inds)
     inds2Seed.remove(seed1opp)
-    seed2opp = inds2Seed[np.argmin(pts[inds2Seed])]
+    seed2opp = inds2Seed[np.argmin(ppts[inds2Seed])]
     inds2Seed.remove(seed2opp)
-    matchups = [[teams[seedsRow.index(1)], teams[seed1opp]],
-                [teams[seedsRow.index(2)], teams[seed2opp]],
-                [teams[seedsRow.index(3)], teams[inds2Seed[0]]]]
-    dfP = pd.DataFrame(
-        np.c_[pts/13, seedsRow], index=teams, columns=['avgPts', 'seed']
-    )
-    dfP = dfP[dfP['seed'] > 0]
-    dfP['regressed'] = dfP.avgPts.mean() * 0.7 + dfP.avgPts*0.3
-    playoffPts = np.random.randn(6, 3)*25 + dfP.regressed.values.reshape(6,1)
-    dfP['P1'] = playoffPts[:,0]
-    dfP['P2'] = playoffPts[:,1]
-    dfP['P3'] = playoffPts[:,2]
-    dfP['P1B'] = 0
-    dfP.loc[teams[seedsRow.index(1)], 'P1B'] = bonus1
-    dfP.loc[teams[seedsRow.index(2)], 'P1B'] = bonus2
-    reversed_matchups = [[x[1], x[0]] for x in matchups]
-    all_matchups = copy.copy(matchups)
-    all_matchups.extend(reversed_matchups)
-    all_matchups = np.array(all_matchups)
-    dfP.loc[all_matchups[:,0], "P1Opp"]=all_matchups[:, 1]
-    dfP["P1Win"] = (dfP["P1"].values + dfP['P1B'].values) > dfP.loc[dfP['P1Opp'].values].P1.values
-    dfPW2 = dfP[dfP["P1Win"]]
-    dfP["W2"]=dfPW2.P2 + dfPW2.P3
-    dfP.sort_values('W2', ascending=False, inplace=True)
-    dfP.loc[dfP.index.values, "Result"] = [1,2,3,4,4,4]
-    yyy = dfP.loc[teams, 'Result']
-    yyy = yyy.fillna(7)
+    matchups = [[pseedsRow.index(1), seed1opp],
+                    [pseedsRow.index(2), seed2opp],
+                    [pseedsRow.index(3), inds2Seed[0]]]
+
+    # 1 and 2 seed get 1% and 0.5% of total points bonuses:
+    bonus1 = ppts[pseedsRow.index(1)]*0.01  
+    bonus2 = ppts[pseedsRow.index(2)]*0.005
+
+    # Regress expected points heavily back to the mean
+    ppts_avg = (pts.mean()* 0.7 + ppts*0.3)/13
+
+
+    playoffPts = np.random.randn(6, 3)*25 + ppts_avg.reshape(6,1)
+    playoffPts[pseedsRow.index(1), 0] +=  bonus1
+    playoffPts[pseedsRow.index(2), 0] +=  bonus2
+
+    # Determine the winner of each matchup in 1st round
+    yyyPlayoffs = np.zeros(6, dtype=int)
+    for (higher_seed, lower_seed) in matchups:
+        if (playoffPts[higher_seed, 0] > playoffPts[lower_seed, 0]):
+            yyyPlayoffs[lower_seed] = 4
+        else:
+            yyyPlayoffs[higher_seed] = 4
+
+    # Rank the three teams in the final
+    finalTeams = np.where(yyyPlayoffs == 0)[0]
+    xxx = playoffPts[finalTeams, 1:].sum(axis=1)
+    yyyPlayoffs[finalTeams[np.argsort(xxx)[::-1]]] = np.arange(1,4)
+
+    # Output in the standard order (Daniel, Torry, Mitch, etc...)
+    # 1,2,3 for 1st, 2nd, 3rd, 4 = 1st round loss, 7 = missed playoffs
+    yyy = np.ones(10, dtype=int)*7
+    yyy[playoff_inds] = yyyPlayoffs
+
     return yyy
 
 
@@ -121,10 +132,10 @@ scale_factor = 0.953
 df12['left'] = (df12['Proj'] - df12['Pts'])*scale_factor # Scale factor
 df12Inds = match_inds(df12.Team.values, teams)
 
-df13 = pd.read_excel('live-pts.xlsx', 'W13')
-df13['TempProj'] = (df13['Proj']*0.6 + ptsMean*0.4/scale_factor) # Fix by Thursday
-df13['left'] = (df13['TempProj'] - df13['Pts'])*scale_factor # Scale factor
-df13Inds = match_inds(df13.Team.values, teams)
+pts_proj13 = np.load('scores_projs13.npy')
+curr_pts13 = pts_proj13[:, 0]
+temp_proj = pts_proj13[:, 1]*0.4 + ptsMean*0.6/scale_factor # Fix by Thursday
+pts_left13 = (temp_proj - curr_pts13) * scale_factor
 
 
 # Pts
@@ -136,9 +147,6 @@ pts_left12 = df12.left.values[df12Inds]
 pts_w12 = np.r_[[gamma(pts, N) for pts in pts_left12]].T + curr_pts12
 wins12 = pts_w12 > pts_w12[:, indices(w12Opp)]
 
-curr_pts13 = df13.Pts.values[df13Inds]
-pts_left13 = df13.left.values[df13Inds]
-
 pts_w13 = np.r_[[gamma(pts, N) for pts in pts_left13]].T + curr_pts13
 wins13 = pts_w13 > pts_w13[:, indices(w13Opp)]
 
@@ -149,7 +157,7 @@ total_wins = wins + wins12.astype(int) + wins13.astype(int)
 seeds = np.array([seed(total_wins[i], total_pts[i]) for i in tqdm(range(N))])
 
 playoffResults = np.array(
-    [playoffs(w,p,s)for w, p, s in tqdm(zip(total_wins, total_pts, seeds), total=N)]
+    [playoffs_fast(w,p,s)for w, p, s in tqdm(zip(total_wins, total_pts, seeds), total=N)]
 )
 
 np.save('w12.npy', pts_w12)
