@@ -1,3 +1,9 @@
+echo "Executing stuff"
+
+time python update_data.py
+
+echo "Finished updating"
+
 mkdir -p ~/.streamlit/
 
 echo "\

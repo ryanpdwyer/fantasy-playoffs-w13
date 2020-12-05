@@ -55,6 +55,7 @@ def playoffs_fast(wins, pts, seedsRow):
     seedsArray = seedsRow
     playoff_inds = np.where(seedsArray > 0)[0]
 
+    # Just the playoff teams
     pwins = wins[playoff_inds]
     ppts = pts[playoff_inds]
     pseedsRow = list(seedsArray[playoff_inds])
@@ -74,7 +75,7 @@ def playoffs_fast(wins, pts, seedsRow):
     bonus1 = ppts[pseedsRow.index(1)]*0.01  
     bonus2 = ppts[pseedsRow.index(2)]*0.005
 
-    # Regress expected points heavily back to the mean
+    # Regress expected points during the playoffs heavily back to the mean
     ppts_avg = (pts.mean()* 0.7 + ppts*0.3)/13
 
 
@@ -134,7 +135,7 @@ df12Inds = match_inds(df12.Team.values, teams)
 
 pts_proj13 = np.load('scores_projs13.npy')
 curr_pts13 = pts_proj13[:, 0]
-temp_proj = pts_proj13[:, 1]*0.4 + ptsMean*0.6/scale_factor # Fix by Thursday
+temp_proj = pts_proj13[:, 1]*0.6 + ptsMean*0.4/scale_factor # Fix by Thursday
 pts_left13 = (temp_proj - curr_pts13) * scale_factor
 
 
