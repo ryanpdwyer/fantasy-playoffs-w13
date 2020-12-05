@@ -117,7 +117,7 @@ wins13 = pts_w13 > pts_w13[:, indices(w13Opp)]
 total_pts = pts_w12+pts_w13+df["Pts"].values
 total_wins = df['Wins'].values + wins12.astype(int) + wins13.astype(int)
 
-auto_update = True
+auto_update = False
 if auto_update:
     with open("update_time.txt", "r") as fh:
         st.write("Updated {}".format(fh.read()))
