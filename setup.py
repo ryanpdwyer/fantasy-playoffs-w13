@@ -1,7 +1,7 @@
 import os
 from setuptools import setup, find_packages
 
-
+print("Running the setup.py file")
 os.system('python update_data.py')
 
 setup(
