@@ -1,5 +1,12 @@
 #! /bin/bash
 
+trap ctrl_c SIGINT
+
+function ctrl_c() {
+    gsed -i 's/auto_update = True/auto_update = False/g' first_app.py
+}
+
+
 function updateScoring {
 
     echo `date +"%A %I:%M %p"` > update_time.txt
@@ -19,4 +26,3 @@ do
     sleep 300 # Wait 5 minutes
 done
 
-gsed -i 's/auto_update = True/auto_update = False/g' first_app.py

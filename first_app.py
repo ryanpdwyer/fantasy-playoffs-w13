@@ -120,7 +120,7 @@ total_wins = df['Wins'].values + wins12.astype(int) + wins13.astype(int)
 auto_update = True
 if auto_update:
     with open("update_time.txt", "r") as fh:
-        st.write("Updated at {}".format(fh.read()))
+        st.write("Updated {}".format(fh.read()))
 
 st.write("Projected outcomes for each game:")
 
