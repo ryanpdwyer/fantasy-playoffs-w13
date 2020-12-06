@@ -1,12 +1,5 @@
 #! /bin/bash
 
-trap ctrl_c SIGINT
-
-function ctrl_c() {
-    gsed -i 's/auto_update = True/auto_update = False/g' first_app.py
-    exit
-}
-
 
 function updateScoring {
 
@@ -18,12 +11,12 @@ function updateScoring {
 }
 
 
-gsed -i 's/auto_update = False/auto_update = True/g' first_app.py
+# gsed -i 's/auto_update = False/auto_update = True/g' first_app.py
 
 while :
 do 
     echo "Press Ctrl+C to stop"
     updateScoring
-    sleep 300 # Wait 5 minutes
+    sleep 600 # Wait 10 minutes
 done
 
