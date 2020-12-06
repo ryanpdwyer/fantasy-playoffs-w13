@@ -679,18 +679,17 @@ r = requests.get('https://api.sleeper.app/v1/league/599841620514373632/matchups/
 
 starters = {rosterid_dict[rr['roster_id']]: rr['starters'] for rr in r.json()}
 
-starters_out = {key: [players_out[v] for v in val if v in players_out] for key, val in starters.items()}
+# starters_out = {key: [players_out[v] for v in val if v in players_out] for key, val in starters.items()}
 
-bonus_points = {key: sum([10 if v != 'QB' else 22 for v in val]) for key, val in starters_out.items()}
+# bonus_points = {key: sum([10 if v != 'QB' else 22 for v in val]) for key, val in starters_out.items()}
 
-print(bonus_points)
+# print(bonus_points)
 
-bonus_array = np.array([bonus_points[t] for t in teams_correctly_ordered])
-
+# bonus_array = np.array([bonus_points[t] for t in teams_correctly_ordered])
 
 print(dict(zip(teams_correctly_ordered, projs[inds])))
 
-scores_projs = np.c_[scores[inds], projs[inds] + bonus_array]
+scores_projs = np.c_[scores[inds], projs[inds]]
 
 print(scores_projs)
 

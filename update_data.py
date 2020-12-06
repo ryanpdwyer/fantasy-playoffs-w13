@@ -135,8 +135,7 @@ df12Inds = match_inds(df12.Team.values, teams)
 
 pts_proj13 = np.load('scores_projs13.npy')
 curr_pts13 = pts_proj13[:, 0]
-temp_proj = pts_proj13[:, 1]*0.6 + ptsMean*0.4/scale_factor # Fix by Thursday
-pts_left13 = (temp_proj - curr_pts13) * scale_factor
+pts_left13 = (pts_proj13[:, 1] - curr_pts13) * scale_factor
 
 
 # Pts
