@@ -17,6 +17,6 @@ while :
 do 
     echo "Press Ctrl+C to stop"
     updateScoring
-    sleep 600 # Wait 10 minutes
+    sleep 540 # Wait 9 minutes
 done
 
